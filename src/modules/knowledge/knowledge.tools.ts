@@ -1,7 +1,8 @@
-import { ToolDecorator as Tool, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, Injectable, z } from '@nitrostack/core';
 import { KnowledgeRepository } from './knowledge.repository.js';
 import { EmbeddingsService } from '../embeddings/embeddings.service.js';
 
+@Injectable()
 export class KnowledgeTools {
   constructor(
     private readonly repo: KnowledgeRepository,

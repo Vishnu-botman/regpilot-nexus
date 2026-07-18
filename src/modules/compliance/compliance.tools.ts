@@ -1,9 +1,10 @@
-import { ToolDecorator as Tool, Widget, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, Widget, Injectable, z } from '@nitrostack/core';
 import { ComplianceRepository } from './compliance.repository.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+@Injectable()
 export class ComplianceTools {
   constructor(private readonly repo: ComplianceRepository) {}
 

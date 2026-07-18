@@ -1,6 +1,7 @@
-import { ToolDecorator as Tool, Widget, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, Widget, Injectable, z } from '@nitrostack/core';
 import { RegulationsRepository } from './regulations.repository.js';
 
+@Injectable()
 export class RegulationsTools {
   constructor(private readonly repository: RegulationsRepository) {}
 

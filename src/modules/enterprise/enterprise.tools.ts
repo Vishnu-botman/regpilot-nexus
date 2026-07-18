@@ -1,5 +1,6 @@
-import { ToolDecorator as Tool, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, Injectable, z } from '@nitrostack/core';
 
+@Injectable()
 export class EnterpriseTools {
   private githubToken: string;
   private slackToken: string;

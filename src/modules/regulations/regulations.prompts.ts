@@ -1,6 +1,7 @@
-import { PromptDecorator as Prompt, ExecutionContext } from '@nitrostack/core';
+import { PromptDecorator as Prompt, ExecutionContext, Injectable } from '@nitrostack/core';
 import { RegulationsRepository } from './regulations.repository.js';
 
+@Injectable()
 export class RegulationsPrompts {
   constructor(private readonly repository: RegulationsRepository) {}
 

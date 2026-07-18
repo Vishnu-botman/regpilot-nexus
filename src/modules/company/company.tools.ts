@@ -1,6 +1,7 @@
-import { ToolDecorator as Tool, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, Injectable, z } from '@nitrostack/core';
 import { CompanyRepository } from './company.repository.js';
 
+@Injectable()
 export class CompanyTools {
   constructor(private readonly repo: CompanyRepository) {}
 
