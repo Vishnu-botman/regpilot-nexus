@@ -1,5 +1,5 @@
 import { Injectable } from '@nitrostack/core';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import {
   EmbeddingChunk,
   EmbeddingResult,
@@ -7,8 +7,6 @@ import {
   DEFAULT_EMBEDDING_CONFIG,
   PipelineResult,
 } from './embeddings.types.js';
-
-const prisma = new PrismaClient();
 
 @Injectable()
 export class EmbeddingsService {

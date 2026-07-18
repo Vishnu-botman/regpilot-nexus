@@ -1,7 +1,7 @@
 import { ResourceDecorator as Resource, Injectable } from '@nitrostack/core';
 import { CompanyRepository } from './company.repository.js';
 
-@Injectable()
+@Injectable({ deps: [CompanyRepository] })
 export class CompanyResources {
   constructor(private readonly repo: CompanyRepository) {}
 

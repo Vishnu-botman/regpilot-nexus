@@ -2,9 +2,9 @@ import { McpApp, Module, ConfigModule } from '@nitrostack/core';
 import { RegulationsModule } from './modules/regulations/regulations.module.js';
 import { ComplianceModule } from './modules/compliance/compliance.module.js';
 import { CompanyModule } from './modules/company/company.module.js';
-import { EnterpriseModule } from './modules/enterprise/enterprise.module.js';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module.js';
 import { EmbeddingsModule } from './modules/embeddings/embeddings.module.js';
+import { MonitorModule } from './modules/monitor/monitor.module.js';
 import { SystemHealthCheck } from './health/system.health.js';
 
 const logLevel = (process.env.LOG_LEVEL === 'debug' || process.env.LOG_LEVEL === 'info' || process.env.LOG_LEVEL === 'warn' || process.env.LOG_LEVEL === 'error')
@@ -29,9 +29,9 @@ const logLevel = (process.env.LOG_LEVEL === 'debug' || process.env.LOG_LEVEL ===
     RegulationsModule,
     ComplianceModule,
     CompanyModule,
-    EnterpriseModule,
     KnowledgeModule,
     EmbeddingsModule,
+    MonitorModule,
   ],
   providers: [
     SystemHealthCheck,

@@ -1,7 +1,8 @@
-import { ToolDecorator as Tool, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, z, Injectable } from '@nitrostack/core';
 import { ExtractorService } from './extractor.service.js';
 import { ParsedSection } from '../parser/parser.types.js';
 
+@Injectable({ deps: [ExtractorService] })
 export class ExtractorTools {
   constructor(private readonly extractorService: ExtractorService) {}
 

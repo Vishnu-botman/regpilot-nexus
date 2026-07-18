@@ -1,5 +1,5 @@
 import { Injectable } from '@nitrostack/core';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import * as cheerio from 'cheerio';
 import {
   RegulatorySource,
@@ -8,8 +8,6 @@ import {
   SOURCE_CONFIGS,
 } from './monitor.types.js';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 @Injectable()
 export class MonitorService {

@@ -1,7 +1,5 @@
 import { Injectable } from '@nitrostack/core';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 @Injectable()
 export class KnowledgeRepository {

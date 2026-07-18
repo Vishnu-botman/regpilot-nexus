@@ -1,6 +1,7 @@
-import { ResourceDecorator as Resource } from '@nitrostack/core';
+import { ResourceDecorator as Resource, Injectable } from '@nitrostack/core';
 import { ComplianceRepository } from './compliance.repository.js';
 
+@Injectable({ deps: [ComplianceRepository] })
 export class ComplianceResources {
   constructor(private readonly repo: ComplianceRepository) {}
 

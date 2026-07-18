@@ -1,6 +1,7 @@
-import { ToolDecorator as Tool, z } from '@nitrostack/core';
+import { ToolDecorator as Tool, z, Injectable } from '@nitrostack/core';
 import { SchedulerService } from './scheduler.service.js';
 
+@Injectable({ deps: [SchedulerService] })
 export class SchedulerTools {
   constructor(private readonly schedulerService: SchedulerService) {}
 

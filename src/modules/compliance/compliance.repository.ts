@@ -1,7 +1,5 @@
 import { Injectable } from '@nitrostack/core';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 export interface ObligationWithDetails {
   id: string;
@@ -103,6 +101,12 @@ export class ComplianceRepository {
   async getCompanyProfile(companyId: string) {
     return prisma.companyProfile.findUnique({
       where: { id: companyId },
+      include: { policies: true },
+    });
+  }
+
+  async getDefaultCompanyProfile() {
+    return prisma.companyProfile.findFirst({
       include: { policies: true },
     });
   }

@@ -6,7 +6,7 @@ import { SchedulerService } from './scheduler.service.js';
   name: 'scheduler',
   description: 'Cron-based regulatory source monitoring scheduler',
   imports: [],
-  controllers: [],
+  controllers: [SchedulerTools],
   providers: [
     SchedulerService,
   ],

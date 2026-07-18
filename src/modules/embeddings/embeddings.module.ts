@@ -6,7 +6,7 @@ import { EmbeddingsService } from './embeddings.service.js';
   name: 'embeddings',
   description: 'Text chunking and embedding generation for semantic search',
   imports: [],
-  controllers: [],
+  controllers: [EmbeddingsTools],
   providers: [
     EmbeddingsService,
   ],

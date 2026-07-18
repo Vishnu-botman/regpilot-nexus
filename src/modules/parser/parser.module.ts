@@ -6,7 +6,7 @@ import { ParserService } from './parser.service.js';
   name: 'parser',
   description: 'Document parsing and structured extraction',
   imports: [],
-  controllers: [],
+  controllers: [ParserTools],
   providers: [
     ParserService,
   ],

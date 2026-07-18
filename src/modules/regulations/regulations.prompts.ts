@@ -1,12 +1,12 @@
 import { PromptDecorator as Prompt, ExecutionContext, Injectable } from '@nitrostack/core';
 import { RegulationsRepository } from './regulations.repository.js';
 
-@Injectable()
+@Injectable({ deps: [RegulationsRepository] })
 export class RegulationsPrompts {
   constructor(private readonly repository: RegulationsRepository) {}
 
   @Prompt({
-    name: 'explain_regulation',
+    name: 'explain_regulation_prompt',
     description: 'Explain a specific regulation in plain language, covering its purpose, key obligations, and applicability.',
     arguments: [
       { name: 'regulationId', description: 'Regulation ID to explain', required: true },

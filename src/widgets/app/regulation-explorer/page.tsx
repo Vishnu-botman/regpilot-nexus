@@ -112,7 +112,7 @@ export default function RegulationExplorer() {
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{reg.title}</div>
                 <div style={{ display: 'flex', gap: 8, fontSize: 12, color: mutedColor }}>
-                  <span style={{ padding: '2px 6px', borderRadius: 4, background: '#3b82f620', color: '#3b82f6' }}>{reg.regulator}</span>
+                  <span style={{ padding: '2px 6px', borderRadius: 4, background: '#3b82f620', color: '#3b82f6' }}>{typeof reg.regulator === 'string' ? reg.regulator : (reg.regulator as any)?.abbreviation || (reg.regulator as any)?.name || ''}</span>
                   {reg.documentType && <span>{reg.documentType.replace(/_/g, ' ')}</span>}
                   {reg.regulationNumber && <span>{reg.regulationNumber}</span>}
                 </div>

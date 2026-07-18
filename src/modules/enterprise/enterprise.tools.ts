@@ -27,7 +27,6 @@ export class EnterpriseTools {
     labels?: string[];
   }) {
     if (!this.githubToken) {
-      console.error('[Enterprise] GitHub token not configured, returning mock response');
       return {
         success: false,
         error: 'GitHub token not configured',
@@ -73,7 +72,6 @@ export class EnterpriseTools {
         repository: input.repository,
       };
     } catch (error) {
-      console.error('[Enterprise] GitHub issue creation failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -97,7 +95,6 @@ export class EnterpriseTools {
     priority?: string;
   }) {
     if (!this.slackToken) {
-      console.error('[Enterprise] Slack token not configured, returning mock response');
       return {
         success: false,
         error: 'Slack token not configured',
@@ -146,7 +143,6 @@ export class EnterpriseTools {
         message: 'Notification sent successfully',
       };
     } catch (error) {
-      console.error('[Enterprise] Slack notification failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

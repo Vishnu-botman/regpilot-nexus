@@ -1,7 +1,5 @@
 import { Injectable } from '@nitrostack/core';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 export interface SearchRegulationsInput {
   query?: string;
@@ -110,13 +108,11 @@ export class RegulationsRepository {
             publicationDate: true,
             effectiveDate: true,
             changeSummary: true,
-          },
-          orderBy: { publicationDate: 'desc' },
-          include: {
             sections: {
               orderBy: { sectionNumber: 'asc' },
             },
           },
+          orderBy: { publicationDate: 'desc' },
         },
       },
     });

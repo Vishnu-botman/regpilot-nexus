@@ -12,16 +12,18 @@
           "data": {
             "regulations": [
               {
-                "id": "reg-rbi-001",
+                "id": "reg-001",
                 "title": "Digital Lending Directions, 2025",
                 "regulator": "RBI",
-                "documentType": "direction",
+                "documentType": "master_direction",
                 "status": "active",
-                "sections": 12
+                "effectiveDate": "2025-01-01",
+                "latestVersion": "1.1"
               }
             ],
-            "totalCount": 1,
-            "query": "digital lending"
+            "total": 1,
+            "limit": 20,
+            "offset": 0
           }
         }
       ],
@@ -43,14 +45,33 @@
               "entityType": "nbfc"
             },
             "summary": {
-              "totalObligations": 45,
-              "mandatoryObligations": 38,
-              "highPriority": 12,
-              "mediumPriority": 18,
-              "lowPriority": 15,
-              "applicableRegulations": 8,
-              "complianceScore": 76
-            }
+              "total": 4,
+              "pending": 4,
+              "mandatory": 4,
+              "overdue": 0,
+              "byType": [
+                { "type": "disclosure", "count": 2 },
+                { "type": "reporting", "count": 2 }
+              ],
+              "byPriority": [
+                { "priority": "high", "count": 2 },
+                { "priority": "medium", "count": 2 }
+              ]
+            },
+            "obligations": [
+              {
+                "id": "obl-001",
+                "title": "Provide clear disclosure of loan terms",
+                "obligationType": "disclosure",
+                "priority": "high",
+                "mandatory": true,
+                "status": "pending",
+                "regulation": "Digital Lending Directions, 2025",
+                "regulator": "RBI",
+                "sectionNumber": "4",
+                "sectionTitle": "Applicability"
+              }
+            ]
           }
         }
       ],
@@ -70,7 +91,7 @@
               "grouped": {
                 "immediate": [
                   {
-                    "id": "obl-001",
+                    "obligationId": "obl-001",
                     "title": "Provide clear disclosure of loan terms",
                     "priority": "high",
                     "mandatory": true,
@@ -79,7 +100,7 @@
                 ],
                 "scheduled": [
                   {
-                    "id": "obl-002",
+                    "obligationId": "obl-002",
                     "title": "Submit quarterly compliance report",
                     "priority": "medium",
                     "mandatory": true,
@@ -105,7 +126,7 @@
     {
       "uri": "/applicability-matrix",
       "name": "Applicability Matrix",
-      "description": "Visual matrix of regulation × company applicability with confidence indicators",
+      "description": "Visual matrix of regulation x company applicability with confidence indicators",
       "examples": [
         {
           "name": "Acme Fintech Applicability",
@@ -115,23 +136,18 @@
               "id": "comp-001",
               "name": "Acme Fintech Solutions Pvt Ltd",
               "industry": "fintech",
-              "entityType": "nbfc",
-              "jurisdictions": ["india"]
+              "entityType": "nbfc"
             },
-            "regulations": [
+            "applicable": true,
+            "confidence": "high",
+            "reasons": ["Matched Section 4 via industry: fintech, entityType: nbfc"],
+            "matchingApplicabilities": [
               {
-                "id": "reg-rbi-001",
-                "title": "Digital Lending Directions, 2025",
-                "regulator": "RBI",
-                "status": "active"
-              }
-            ],
-            "results": [
-              {
-                "regulationId": "reg-rbi-001",
-                "applicable": true,
-                "confidence": "high",
-                "reasons": ["Matched via industry: fintech, entityType: nbfc"]
+                "sectionNumber": "4",
+                "sectionTitle": "Applicability",
+                "description": "This direction applies to all digital lending entities",
+                "operator": "includes",
+                "matchedFields": ["industry: fintech", "entityType: nbfc"]
               }
             ]
           }
@@ -142,4 +158,3 @@
   ],
   "generatedAt": "2026-07-18T00:00:00.000Z"
 }
-

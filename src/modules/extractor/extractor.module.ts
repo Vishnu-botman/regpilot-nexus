@@ -6,7 +6,7 @@ import { ExtractorService } from './extractor.service.js';
   name: 'extractor',
   description: 'Compliance object extraction from parsed regulations',
   imports: [],
-  controllers: [],
+  controllers: [ExtractorTools],
   providers: [
     ExtractorService,
   ],

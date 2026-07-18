@@ -6,7 +6,7 @@ import { MonitorService } from './monitor.service.js';
   name: 'monitor',
   description: 'Regulatory source monitoring and document discovery',
   imports: [],
-  controllers: [],
+  controllers: [MonitorTools],
   providers: [
     MonitorService,
   ],

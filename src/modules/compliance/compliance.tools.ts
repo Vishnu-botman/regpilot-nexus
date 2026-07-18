@@ -1,10 +1,7 @@
 import { ToolDecorator as Tool, Widget, Injectable, z } from '@nitrostack/core';
 import { ComplianceRepository } from './compliance.repository.js';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
-@Injectable()
+@Injectable({ deps: [ComplianceRepository] })
 export class ComplianceTools {
   constructor(private readonly repo: ComplianceRepository) {}
 
@@ -145,7 +142,7 @@ export class ComplianceTools {
     description: 'Find all obligations for a regulation or across all applicable regulations, with optional filters',
     inputSchema: z.object({
       regulationId: z.string().optional().describe('Filter by specific regulation'),
-      companyId: z.string().optional().describe('Company profile ID (for future filtering)'),
+      companyId: z.string().optional().describe('Company profile ID'),
       status: z.enum(['pending', 'in_progress', 'compliant', 'overdue']).optional().describe('Filter by obligation status'),
       mandatory: z.boolean().optional().describe('Filter by mandatory flag'),
       limit: z.number().optional().describe('Max results (default: 50)'),
@@ -189,7 +186,7 @@ export class ComplianceTools {
     if (input.companyId) {
       companyProfile = await this.repo.getCompanyProfile(input.companyId);
     } else {
-      companyProfile = await prisma.companyProfile.findFirst({ include: { policies: true } });
+      companyProfile = await this.repo.getDefaultCompanyProfile();
     }
 
     const result = await this.repo.findObligations({
@@ -252,6 +249,8 @@ export class ComplianceTools {
         pending: obligations.filter(o => o.status === 'pending').length,
         mandatory: obligations.filter(o => o.mandatory).length,
         overdue: obligations.filter(o => o.status === 'overdue').length,
+        byType: Object.entries(obligations.reduce((acc, o) => { acc[o.obligationType || 'unknown'] = (acc[o.obligationType || 'unknown'] || 0) + 1; return acc; }, {} as Record<string, number>)).map(([type, count]) => ({ type, count })),
+        byPriority: Object.entries(obligations.reduce((acc, o) => { acc[o.priority] = (acc[o.priority] || 0) + 1; return acc; }, {} as Record<string, number>)).map(([priority, count]) => ({ priority, count })),
       },
       obligations,
       total: result.total,
@@ -266,7 +265,6 @@ export class ComplianceTools {
     inputSchema: z.object({
       regulationId: z.string().describe('Regulation ID'),
       companyId: z.string().optional().describe('Company profile ID'),
-      department: z.string().optional().describe('Filter by department (reserved for V2)'),
     }),
     examples: {
       request: { regulationId: 'reg-rbi-001', companyId: 'comp-001' },
@@ -284,7 +282,7 @@ export class ComplianceTools {
     },
   })
   @Widget('action-plan-board')
-  async generateActionPlan(input: { regulationId: string; companyId?: string; department?: string }) {
+  async generateActionPlan(input: { regulationId: string; companyId?: string }) {
     const obligations = await this.repo.getObligationsByRegulation(input.regulationId);
 
     if (obligations.length === 0) {
@@ -339,180 +337,6 @@ export class ComplianceTools {
           monitored: grouped.monitored.length,
         },
       },
-    };
-  }
-
-  @Tool({
-    name: 'assess_company',
-    description: 'Assess whether a regulation applies to a company based on applicability rules and company profile',
-    inputSchema: z.object({
-      regulationId: z.string().describe('Regulation ID to evaluate'),
-      companyId: z.string().describe('Company profile ID'),
-    }),
-    examples: {
-      request: { regulationId: 'reg-rbi-001', companyId: 'comp-001' },
-      response: {
-        applicable: true,
-        confidence: 'high',
-        reasons: ['Matched Section 4 via industry: fintech, entityType: nbfc'],
-      },
-    },
-  })
-  @Widget('applicability-matrix')
-  async assessCompany(input: { regulationId: string; companyId: string }) {
-    return this.evaluateApplicability(input);
-  }
-
-  @Tool({
-    name: 'find_compliance_obligations',
-    description: 'Find all compliance obligations for a regulation or across all applicable regulations, with optional filters',
-    inputSchema: z.object({
-      regulationId: z.string().optional().describe('Filter by specific regulation'),
-      companyId: z.string().optional().describe('Company profile ID'),
-      status: z.enum(['pending', 'in_progress', 'compliant', 'overdue']).optional().describe('Filter by obligation status'),
-      mandatory: z.boolean().optional().describe('Filter by mandatory flag'),
-      limit: z.number().optional().describe('Max results (default: 50)'),
-      offset: z.number().optional().describe('Offset for pagination'),
-    }),
-    examples: {
-      request: { regulationId: 'reg-rbi-001', status: 'pending' },
-      response: {
-        obligations: [
-          {
-            id: 'obl-001',
-            title: 'Data Fiduciaries must provide notice',
-            obligationType: 'maintenance',
-            priority: 'high',
-            mandatory: true,
-            status: 'pending',
-          },
-        ],
-        total: 1,
-      },
-    },
-  })
-  @Widget('compliance-dashboard')
-  async findComplianceObligations(input: {
-    regulationId?: string;
-    companyId?: string;
-    status?: string;
-    mandatory?: boolean;
-    limit?: number;
-    offset?: number;
-  }) {
-    return this.findObligations(input);
-  }
-
-  @Tool({
-    name: 'generate_gap_report',
-    description: 'Generate a gap report / compliance action plan organized by priority and deadline',
-    inputSchema: z.object({
-      regulationId: z.string().describe('Regulation ID'),
-      companyId: z.string().optional().describe('Company profile ID'),
-      department: z.string().optional().describe('Filter by department'),
-    }),
-    examples: {
-      request: { regulationId: 'reg-rbi-001', companyId: 'comp-001' },
-      response: {
-        actionPlan: {
-          regulation: 'Digital Lending Directions, 2025',
-          summary: { total: 4, mandatory: 4, highPriority: 4 },
-        },
-      },
-    },
-  })
-  @Widget('action-plan-board')
-  async generateGapReport(input: { regulationId: string; companyId?: string; department?: string }) {
-    return this.generateActionPlan(input);
-  }
-
-  @Tool({
-    name: 'simulate_compliance',
-    description: 'Simulate compliance applicability and find all obligations for a hypothetical company profile structure',
-    inputSchema: z.object({
-      industry: z.string().describe('Industry of the simulated company (e.g., fintech, saas, healthcare, energy, manufacturing)'),
-      entityType: z.string().describe('Entity type of the simulated company (e.g., private_company, startup, public_limited, public_sector_bank)'),
-      jurisdictions: z.array(z.string()).describe('Jurisdictions of the simulated company (e.g., ["india"])'),
-      subIndustry: z.string().optional().describe('Sub-industry of the simulated company'),
-    })
-  })
-  @Widget('applicability-matrix')
-  async simulateCompliance(input: {
-    industry: string;
-    entityType: string;
-    jurisdictions: string[];
-    subIndustry?: string;
-  }) {
-    const mockCompany = {
-      id: 'simulated',
-      name: 'Simulated Company',
-      industry: input.industry,
-      entityType: input.entityType,
-      jurisdictions: input.jurisdictions,
-      subIndustry: input.subIndustry || null,
-    };
-
-    const regulations = await prisma.regulation.findMany({
-      select: { id: true, title: true, status: true }
-    });
-
-    const results = [];
-
-    for (const reg of regulations) {
-      const applicabilities = await this.repo.getApplicabilities(reg.id);
-      if (applicabilities.length === 0) continue;
-
-      const matches = [];
-      for (const item of applicabilities) {
-        const app = item.applicability;
-        const matchedFields = [];
-
-        if (app.industries.length > 0 && mockCompany.industry) {
-          if (app.industries.includes('all') || app.industries.includes(mockCompany.industry) || app.industries.includes(mockCompany.subIndustry || '')) {
-            matchedFields.push(`industry: ${mockCompany.industry}`);
-          }
-        }
-
-        if (app.entityTypes.length > 0 && mockCompany.entityType) {
-          if (app.entityTypes.includes('all') || app.entityTypes.includes(mockCompany.entityType)) {
-            matchedFields.push(`entityType: ${mockCompany.entityType}`);
-          }
-        }
-
-        if (app.jurisdictions.length > 0 && mockCompany.jurisdictions.length > 0) {
-          const jurisdictionOverlap = mockCompany.jurisdictions.filter(j => app.jurisdictions.includes(j));
-          if (jurisdictionOverlap.length > 0) {
-            matchedFields.push(`jurisdictions: ${jurisdictionOverlap.join(', ')}`);
-          }
-        }
-
-        if (matchedFields.length > 0 && app.operator !== 'excludes') {
-          matches.push({
-            sectionNumber: item.sectionNumber,
-            sectionTitle: item.sectionTitle,
-            matchedFields,
-          });
-        }
-      }
-
-      if (matches.length > 0) {
-        const obs = await this.repo.getObligationsByRegulation(reg.id);
-        results.push({
-          regulationId: reg.id,
-          title: reg.title,
-          status: reg.status,
-          matchingSections: matches,
-          obligationsCount: obs.length,
-          mandatoryCount: obs.filter(o => o.mandatory).length,
-          highPriorityCount: obs.filter(o => o.priority === 'high').length,
-        });
-      }
-    }
-
-    return {
-      simulatedProfile: input,
-      applicableRegulations: results,
-      totalApplicable: results.length,
     };
   }
 }
