@@ -169,8 +169,8 @@ export class RegulationsRepository {
 
     if (!versionA || !versionB) return null;
 
-    const sectionsA = new Map(versionA.sections.map(s => [s.sectionNumber, s]));
-    const sectionsB = new Map(versionB.sections.map(s => [s.sectionNumber, s]));
+    const sectionsA = new Map<string, any>(versionA.sections.map((s: any) => [s.sectionNumber, s]));
+    const sectionsB = new Map<string, any>(versionB.sections.map((s: any) => [s.sectionNumber, s]));
 
     const added: any[] = [];
     const removed: any[] = [];

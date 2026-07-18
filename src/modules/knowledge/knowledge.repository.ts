@@ -84,9 +84,9 @@ export class KnowledgeRepository {
 
   async getChunkStats() {
     const total = await prisma.vectorChunk.count();
-    const withEmbeddingsResult = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
+    const withEmbeddingsResult = (await prisma.$queryRawUnsafe(
       `SELECT COUNT(*) as count FROM vector_chunks WHERE embedding IS NOT NULL`
-    );
+    )) as { count: bigint }[];
     const withEmbeddings = Number(withEmbeddingsResult[0].count);
 
     const byRegulation = await prisma.vectorChunk.groupBy({
@@ -98,7 +98,7 @@ export class KnowledgeRepository {
       total,
       withEmbeddings,
       withoutEmbeddings: total - withEmbeddings,
-      byRegulation: byRegulation.map(r => ({
+      byRegulation: byRegulation.map((r: any) => ({
         regulationId: r.regulationId,
         chunkCount: r._count.id,
       })),
