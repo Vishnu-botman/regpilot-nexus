@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Regulator ───────────────────────────────────────────────
+
+model Regulator {
+  id           String       @id @default(cuid()) @map("id")
+  name         String       @map("name")
+  abbreviation String       @unique @map("abbreviation")
+  website      String?      @map("website")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  regulations  Regulation[]
+
+  @@map("regulators")
+}
+
+// ─── Regulation ──────────────────────────────────────────────
+
+model Regulation {
+  id              String    @id @default(cuid()) @map("id")
+  title           String    @map("title")
+  regulationNumber String? @map("regulation_number")
+  documentNumber  String?   @map("document_number")
+  gazetteReference String? @map("gazette_reference")
+  regulatorId     String    @map("regulator_id")
+  documentType    String    @map("document_type")
+  issueDate       DateTime? @map("issue_date")
+  effectiveDate   DateTime? @map("effective_date")
+  status          String    @default("active") @map("status")
+  summary         String?   @map("summary")
+  sourceUrl       String?   @map("source_url")
+  language        String    @default("en") @map("language")
+  documentStatus  String?   @map("document_status")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  regulator   Regulator  @relation(fields: [regulatorId], references: [id])
+  versions    Version[]
+  vectorChunks VectorChunk[]
+
+  @@index([regulatorId])
+  @@index([status])
+  @@index([effectiveDate])
+  @@map("regulations")
+}
+
+// ─── Version ─────────────────────────────────────────────────
+
+model Version {
+  id                 String    @id @default(cuid()) @map("id")
+  regulationId       String    @map("regulation_id")
+  versionNumber      String    @map("version_number")
+  publicationDate    DateTime? @map("publication_date")
+  effectiveDate      DateTime? @map("effective_date")
+  supersedesVersion  String?   @map("supersedes_version")
+  changeSummary      String?   @map("change_summary")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  regulation Regulation @relation(fields: [regulationId], references: [id])
+  sections   Section[]
+
+  @@index([regulationId])
+  @@map("versions")
+}
+
+// ─── Section ─────────────────────────────────────────────────
+
+model Section {
+  id              String    @id @default(cuid()) @map("id")
+  versionId       String    @map("version_id")
+  sectionNumber   String    @map("section_number")
+  title           String?   @map("title")
+  content         String?   @map("content")
+  parentSectionId String?   @map("parent_section_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  version          Version            @relation(fields: [versionId], references: [id])
+  parentSection    Section?           @relation("SectionHierarchy", fields: [parentSectionId], references: [id])
+  childSections    Section[]          @relation("SectionHierarchy")
+  applicabilities  Applicability[]
+  obligations      Obligation[]
+  penalties        Penalty[]
+  reportingReqs    ReportingRequirement[]
+
+  @@index([versionId])
+  @@index([parentSectionId])
+  @@map("sections")
+}
+
+// ─── Applicability ───────────────────────────────────────────
+
+model Applicability {
+  id          String   @id @default(cuid()) @map("id")
+  sectionId   String   @map("section_id")
+  description String?  @map("description")
+  operator    String   @default("includes") @map("operator")
+  industries  String[] @map("industries")
+  entityTypes String[] @map("entity_types")
+  jurisdictions String[] @map("jurisdictions")
+  thresholds  Json?    @map("thresholds")
+  conditions  Json?    @map("conditions")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  section Section @relation(fields: [sectionId], references: [id])
+
+  @@index([sectionId])
+  @@map("applicabilities")
+}
+
+// ─── Obligation ──────────────────────────────────────────────
+
+model Obligation {
+  id              String   @id @default(cuid()) @map("id")
+  sectionId       String   @map("section_id")
+  title           String   @map("title")
+  description     String?  @map("description")
+  obligationType  String?  @map("obligation_type")
+  priority        String   @default("medium") @map("priority")
+  mandatory       Boolean  @default(true) @map("mandatory")
+  frequency       String?  @map("frequency")
+  status          String   @default("pending") @map("status")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  section          Section              @relation(fields: [sectionId], references: [id])
+  deadlines        Deadline[]
+  reportingReqs    ReportingRequirement[]
+  penalties        Penalty[]
+  citations        Citation[]
+
+  @@index([sectionId])
+  @@index([status])
+  @@index([mandatory])
+  @@map("obligations")
+}
+
+// ─── Deadline ────────────────────────────────────────────────
+
+model Deadline {
+  id              String    @id @default(cuid()) @map("id")
+  obligationId    String    @map("obligation_id")
+  deadlineType    String?   @map("deadline_type")
+  frequency       String?   @map("frequency")
+  dueCondition    String?   @map("due_condition")
+  description     String?   @map("description")
+  effectiveFrom   DateTime? @map("effective_from")
+  effectiveUntil  DateTime? @map("effective_until")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  obligation Obligation @relation(fields: [obligationId], references: [id])
+
+  @@index([obligationId])
+  @@map("deadlines")
+}
+
+// ─── Reporting Requirement ───────────────────────────────────
+
+model ReportingRequirement {
+  id               String   @id @default(cuid()) @map("id")
+  sectionId        String   @map("section_id")
+  obligationId     String   @map("obligation_id")
+  authority        String?  @map("authority")
+  reportType       String?  @map("report_type")
+  frequency        String?  @map("frequency")
+  submissionMethod String?  @map("submission_method")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  section    Section     @relation(fields: [sectionId], references: [id])
+  obligation Obligation @relation(fields: [obligationId], references: [id])
+
+  @@index([sectionId])
+  @@index([obligationId])
+  @@map("reporting_requirements")
+}
+
+// ─── Penalty ─────────────────────────────────────────────────
+
+model Penalty {
+  id           String   @id @default(cuid()) @map("id")
+  sectionId    String   @map("section_id")
+  obligationId String?  @map("obligation_id")
+  description  String?  @map("description")
+  penaltyType  String?  @map("penalty_type")
+  severity     String?  @map("severity")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  section    Section     @relation(fields: [sectionId], references: [id])
+  obligation Obligation? @relation(fields: [obligationId], references: [id])
+
+  @@index([sectionId])
+  @@index([obligationId])
+  @@map("penalties")
+}
+
+// ─── Citation ────────────────────────────────────────────────
+
+model Citation {
+  id             String   @id @default(cuid()) @map("id")
+  entityType     String   @map("entity_type")
+  entityId       String   @map("entity_id")
+  sectionNumber  String?  @map("section_number")
+  pageNumber     Int?     @map("page_number")
+  paragraphNumber String? @map("paragraph_number")
+  sourceText     String?  @map("source_text")
+  startOffset    Int?     @map("start_offset")
+  endOffset      Int?     @map("end_offset")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  obligationId String?  @map("obligation_id")
+  obligation   Obligation? @relation(fields: [obligationId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([obligationId])
+  @@map("citations")
+}
+
+// ─── Company Profile ─────────────────────────────────────────
+
+model CompanyProfile {
+  id                String   @id @default(cuid()) @map("id")
+  name              String   @map("name")
+  industry          String?  @map("industry")
+  subIndustry       String?  @map("sub_industry")
+  entityType        String?  @map("entity_type")
+  incorporationType String?  @map("incorporation_type")
+  jurisdictions     String[] @map("jurisdictions")
+  locations         String[] @map("locations")
+  products          String[] @map("products")
+  services          String[] @map("services")
+  licenses          String[] @map("licenses")
+  employeeCount     Int?     @map("employee_count")
+  website           String?  @map("website")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  policies Policy[]
+
+  @@map("company_profiles")
+}
+
+// ─── Policy ──────────────────────────────────────────────────
+
+model Policy {
+  id          String   @id @default(cuid()) @map("id")
+  companyId   String   @map("company_id")
+  title       String   @map("title")
+  category    String?  @map("category")
+  version     String?  @map("version")
+  status      String   @default("active") @map("status")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company CompanyProfile @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("policies")
+}
+
+// ─── Vector Chunk (pgvector) ─────────────────────────────────
+
+model VectorChunk {
+  id             String   @id @default(cuid()) @map("id")
+  regulationId   String   @map("regulation_id")
+  chunkIndex     Int      @map("chunk_index")
+  content        String   @map("content")
+  embedding      Unsupported("vector(1536)")?
+  metadata       Json?    @map("metadata")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  regulation Regulation @relation(fields: [regulationId], references: [id])
+
+  @@index([regulationId])
+  @@map("vector_chunks")
+}

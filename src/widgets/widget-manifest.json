@@ -1,0 +1,145 @@
+{
+  "version": "1.0.0",
+  "widgets": [
+    {
+      "uri": "/regulation-explorer",
+      "name": "Regulation Explorer",
+      "description": "Browse and search regulations with full detail view, version history, and section tree",
+      "examples": [
+        {
+          "name": "Search RBI Regulations",
+          "description": "Search for RBI Digital Lending guidelines",
+          "data": {
+            "regulations": [
+              {
+                "id": "reg-rbi-001",
+                "title": "Digital Lending Directions, 2025",
+                "regulator": "RBI",
+                "documentType": "direction",
+                "status": "active",
+                "sections": 12
+              }
+            ],
+            "totalCount": 1,
+            "query": "digital lending"
+          }
+        }
+      ],
+      "tags": ["regulations", "search", "browse", "compliance"]
+    },
+    {
+      "uri": "/compliance-dashboard",
+      "name": "Compliance Dashboard",
+      "description": "Overview of compliance posture with obligation counts, priority breakdown, and status cards",
+      "examples": [
+        {
+          "name": "Acme Fintech Dashboard",
+          "description": "Compliance overview for Acme Fintech Solutions Pvt Ltd",
+          "data": {
+            "company": {
+              "id": "comp-001",
+              "name": "Acme Fintech Solutions Pvt Ltd",
+              "industry": "fintech",
+              "entityType": "nbfc"
+            },
+            "summary": {
+              "totalObligations": 45,
+              "mandatoryObligations": 38,
+              "highPriority": 12,
+              "mediumPriority": 18,
+              "lowPriority": 15,
+              "applicableRegulations": 8,
+              "complianceScore": 76
+            }
+          }
+        }
+      ],
+      "tags": ["compliance", "dashboard", "overview", "obligations"]
+    },
+    {
+      "uri": "/action-plan-board",
+      "name": "Action Plan Board",
+      "description": "Kanban-style obligation tracker with immediate, scheduled, and monitored columns",
+      "examples": [
+        {
+          "name": "RBI Digital Lending Action Plan",
+          "description": "Action plan for RBI Digital Lending compliance",
+          "data": {
+            "actionPlan": {
+              "regulation": "Digital Lending Directions, 2025",
+              "grouped": {
+                "immediate": [
+                  {
+                    "id": "obl-001",
+                    "title": "Provide clear disclosure of loan terms",
+                    "priority": "high",
+                    "mandatory": true,
+                    "regulator": "RBI"
+                  }
+                ],
+                "scheduled": [
+                  {
+                    "id": "obl-002",
+                    "title": "Submit quarterly compliance report",
+                    "priority": "medium",
+                    "mandatory": true,
+                    "regulator": "RBI"
+                  }
+                ],
+                "monitored": []
+              },
+              "summary": {
+                "total": 4,
+                "mandatory": 4,
+                "highPriority": 2,
+                "immediate": 2,
+                "scheduled": 1,
+                "monitored": 1
+              }
+            }
+          }
+        }
+      ],
+      "tags": ["action", "plan", "kanban", "obligations", "compliance"]
+    },
+    {
+      "uri": "/applicability-matrix",
+      "name": "Applicability Matrix",
+      "description": "Visual matrix of regulation × company applicability with confidence indicators",
+      "examples": [
+        {
+          "name": "Acme Fintech Applicability",
+          "description": "Applicability matrix for Acme Fintech Solutions",
+          "data": {
+            "company": {
+              "id": "comp-001",
+              "name": "Acme Fintech Solutions Pvt Ltd",
+              "industry": "fintech",
+              "entityType": "nbfc",
+              "jurisdictions": ["india"]
+            },
+            "regulations": [
+              {
+                "id": "reg-rbi-001",
+                "title": "Digital Lending Directions, 2025",
+                "regulator": "RBI",
+                "status": "active"
+              }
+            ],
+            "results": [
+              {
+                "regulationId": "reg-rbi-001",
+                "applicable": true,
+                "confidence": "high",
+                "reasons": ["Matched via industry: fintech, entityType: nbfc"]
+              }
+            ]
+          }
+        }
+      ],
+      "tags": ["applicability", "matrix", "evaluation", "compliance"]
+    }
+  ],
+  "generatedAt": "2026-07-18T00:00:00.000Z"
+}
+

@@ -1,0 +1,377 @@
+# RegPilot Nexus - Project Structure & Design
+
+```
+regpilot-nexus/
+├── package.json                    # regpilot-nexus v0.1.0
+├── tsconfig.json                   # ES2022, decorators, strict
+├── .env.example                    # DB, scheduler, integrations
+├── prisma/
+│   └── schema.prisma               # 13 models (12 domain + VectorChunk)
+│
+├── src/
+│   ├── index.ts                    # Entry: McpApplicationFactory
+│   ├── app.module.ts               # @McpApp root: 10 modules imported
+│   ├── health/
+│   │   └── system.health.ts        # Uptime, memory, PID check
+│   │
+│   └── modules/
+│       ├── regulations/             # Tools: search, get, compare
+│       │   ├── regulations.module.ts
+│       │   ├── regulations.tools.ts
+│       │   ├── regulations.resources.ts
+│       │   └── regulations.prompts.ts
+│       │
+│       ├── compliance/              # Tools: applicability, obligations, action plan
+│       │   ├── compliance.module.ts
+│       │   ├── compliance.repository.ts
+│       │   ├── compliance.tools.ts
+│       │   ├── compliance.resources.ts
+│       │   └── compliance.prompts.ts
+│       │
+│       ├── company/                 # Tools: profile, policies
+│       │   ├── company.module.ts
+│       │   ├── company.repository.ts
+│       │   ├── company.tools.ts
+│       │   └── company.resources.ts
+│       │
+│       ├── enterprise/              # Tools: GitHub issues, Slack notify
+│       │   ├── enterprise.module.ts
+│       │   └── enterprise.tools.ts
+│       │
+│       ├── knowledge/               # Tools: semantic search, chunks
+│       │   ├── knowledge.module.ts
+│       │   ├── knowledge.repository.ts
+│       │   └── knowledge.tools.ts
+│       │
+│       └── scheduler/               # Tools: scheduler status, trigger, schedule
+│           ├── scheduler.module.ts
+│           ├── scheduler.service.ts
+│           ├── scheduler.tools.ts
+│           └── scheduler.types.ts
+│
+│       └── monitor/                 # Tools: check source, list sources, recent regs
+│           ├── monitor.module.ts
+│           ├── monitor.service.ts
+│           ├── monitor.tools.ts
+│           └── monitor.types.ts
+│
+│       └── parser/                  # Tools: parse document, extract metadata
+│           ├── parser.module.ts
+│           ├── parser.service.ts
+│           └── parser.types.ts
+│
+│       └── extractor/               # Tools: extract compliance objects
+│           ├── extractor.module.ts
+│           ├── extractor.service.ts
+│           └── extractor.types.ts
+│
+│       └── embeddings/              # Tools: chunk and embed, manage embeddings
+│           ├── embeddings.module.ts
+│           ├── embeddings.service.ts
+│           ├── embeddings.tools.ts
+│           └── embeddings.types.ts
+│
+├── src/widgets/                     # NitroStack Widget Experience (Phase 6)
+│   ├── package.json                 # regpilot-widgets v1.0.0
+│   ├── widget-manifest.json         # Widget registry (2 P0 widgets)
+│   ├── tsconfig.json                # Next.js TypeScript config
+│   ├── next.config.js               # Next.js config
+│   └── app/
+│       ├── layout.tsx               # WidgetLayout wrapper
+│       ├── regulation-explorer/
+│       │   └── page.tsx             # Browse/search regulations
+│       └── compliance-dashboard/
+│           └── page.tsx             # Compliance overview dashboard
+│
+├── src/demo/
+│   └── seed-demo.ts                 # Demo data seeding script
+│
+├── demo-flow.md                     # Demo narrative and guide
+```
+
+## Module Summary
+
+| Module | Tools | Resources | Prompts |
+|---|---|---|---|
+| regulations | search_regulations, get_regulation, compare_regulation_versions, get_regulation_versions | regulations://latest | explain_regulation |
+| compliance | evaluate_applicability, find_obligations, generate_action_plan | obligations://all | compliance_summary, audit_checklist |
+| company | get_company_profile, update_company_profile, manage_policies | company://profile, policies://all | - |
+| enterprise | create_github_issue, notify_slack | - | - |
+| knowledge | semantic_search, get_regulation_chunks | - | - |
+| scheduler | get_scheduler_status, trigger_monitoring_job, update_job_schedule, start/stop_scheduler | - | - |
+| monitor | check_regulatory_source, list_regulatory_sources, get_recent_regulations | - | - |
+| parser | parse_document, extract_metadata | - | - |
+| extractor | extract_compliance_objects | - | - |
+| embeddings | chunk_and_embed, get/delete_regulation_embeddings | - | - |
+
+## Prisma Models
+
+| Model | Purpose |
+|---|---|
+| Regulator | Issuing authority (RBI, SEBI, MCA, CERT-In) |
+| Regulation | Regulatory document with metadata |
+| Version | Specific revision of a regulation |
+| Section | Logical structure (chapters, clauses) |
+| Applicability | Who must comply (with include/exclude operator) |
+| Obligation | Actionable compliance requirement |
+| Deadline | Compliance timeline with transition support |
+| ReportingRequirement | Mandatory reporting obligations |
+| Penalty | Consequences for non-compliance |
+| Citation | Traceability back to source (with offsets) |
+| CompanyProfile | Organization being evaluated |
+| Policy | Internal company policies |
+| VectorChunk | pgvector semantic search chunks |
+
+---
+
+## Knowledge Lifecycle & Retrieval Strategy (Design Review)
+
+Decisions that will shape the ingestion pipeline (Phase 3).
+
+### 1. Regulation Lifecycle States
+
+| Status | Meaning | Ingestion Behavior |
+|---|---|---|
+| DRAFT | Proposed, not yet effective | Ingest for monitoring, exclude from compliance evaluation |
+| ACTIVE | Currently in force | Full ingestion, embeddings, compliance evaluation |
+| SUPERSEDED | Replaced by newer version | Keep in DB, exclude from default compliance evaluation |
+| REPEALED | Formally withdrawn | Keep in DB for historical reference, exclude from all default queries |
+| ARCHIVED | No longer maintained but historically relevant | Keep in DB, exclude from compliance evaluation |
+
+**Decision:** Evolve the existing `status` field to represent the full lifecycle. No separate `regulationLifecycle` field needed — the current `status` string has no enum constraint and can be expanded to cover these states. Simpler data model, no inconsistency risk.
+
+### 2. Version Resolution
+
+Two options for how `evaluate_applicability` handles multiple versions:
+
+- **Option A (Recommended):** Latest effective version only. Default evaluates the latest version where `effectiveDate <= now()` and `lifecycle = active`. Historical version evaluation available via explicit parameter.
+- **Option B (Current):** All versions. Simpler but risks duplicate obligations across versions.
+
+**Decision:** Option A. Add `versionResolution: 'latest' | 'all' | 'specific'` parameter. Default to `latest`.
+
+### 3. Semantic Search Scope
+
+- **Default scope:** Search only `active` regulations with `lifecycle = active`. This covers 95% of queries.
+- **Override options:** `scope: 'all'` (everything), `regulationId: '...'` (specific regulation), `includeHistorical: true` (include superseded versions).
+
+**Decision:** Default to active-only. The `searchSimilar` query filters by `regulation.status = 'active'` unless explicitly told otherwise.
+
+### 4. Embedding Refresh & Synchronization
+
+Three triggers for embedding refresh:
+
+| Trigger | Action |
+|---|---|
+| New regulation ingested | Generate embeddings for all new chunks |
+| Version superseded | Mark old version's embeddings as stale, generate new ones for replacement version |
+| Regulation repealed | Soft-delete embeddings (keep for historical queries, exclude from default search) |
+
+**Decision:** Embedding generation is part of the ingestion pipeline, not a separate step. The parser produces chunks, the embedding service generates vectors, both are stored atomically.
+
+### 5. Retrieval Ranking
+
+Results ranked by:
+
+1. **Semantic similarity** (primary) — cosine distance from pgvector
+2. **Applicability** (secondary) — does this regulation apply to the company?
+3. **Status** (tertiary) — active > superseded > repealed
+4. **Recency** (tiebreaker) — newer versions rank higher
+
+SQL ordering:
+```sql
+ORDER BY
+  embedding <=> $query_embedding,  -- semantic similarity
+  CASE WHEN r.status = 'active' THEN 0 ELSE 1 END,  -- status
+  v.effective_date DESC  -- recency
+```
+
+**Decision:** Start with semantic similarity + recency. Add applicability filtering as a post-query filter (only return chunks from regulations that match the company profile).
+
+### Summary
+
+| Decision | Recommendation |
+|---|---|
+| Lifecycle states | Evolve existing `status` field: DRAFT, ACTIVE, SUPERSEDED, REPEALED, ARCHIVED |
+| Version resolution | Default to latest effective version; allow override |
+| Search scope | Default to active regulations; allow scope parameter |
+| Embedding refresh | Part of ingestion pipeline, not separate |
+| Retrieval ranking | Similarity → status → recency; applicability as filter |
+
+---
+
+## Domain Validation — Cross-Regulation Mapping
+
+Validating that the domain model represents different regulatory structures without schema changes.
+
+### 1. DPDP Act 2023 (Data Protection)
+
+| Domain Object | DPDP Act Mapping | Schema Compatible? |
+|---|---|---|
+| **Regulation** | Digital Personal Data Protection Act, 2023 (No. 22 of 2023) | ✅ regulationNumber, documentType='act' |
+| **Version** | Act (Aug 2023) + Rules (Nov 2025) | ✅ versionNumber, publicationDate, effectiveDate |
+| **Section** | Sections 4-16 (Lawful Processing, Notice, Consent, Obligations, Penalties) | ✅ sectionNumber, title, content |
+| **Applicability** | All entities processing digital personal data of Indian citizens | ✅ industries=['all'], entityTypes=['all'], jurisdictions=['india'] |
+| **Obligation** | "Data Fiduciaries must provide notice, obtain consent, protect data, report breaches" | ✅ obligationType='maintenance', mandatory=true |
+| **Deadline** | "Compliance by May 2027" | ✅ deadlineType='absolute', effectiveUntil=2027-05-13 |
+| **ReportingRequirement** | "Breach notification to Data Protection Board without delay" | ✅ authority='Data Protection Board', reportType='breach_notification' |
+| **Penalty** | "Up to ₹250 crore per breach" | ✅ penaltyType='monetary', severity='high' |
+| **Citation** | "Section 8(1) requires Data Fiduciaries to..." | ✅ sectionNumber, sourceText |
+
+**Result:** DPDP Act maps cleanly to all 9 domain objects. No schema changes needed.
+
+### 2. Code on Wages 2019 (Labour)
+
+| Domain Object | Code on Wages Mapping | Schema Compatible? |
+|---|---|---|
+| **Regulation** | The Code on Wages, 2019 (Act No. 29 of 2019) | ✅ regulationNumber, documentType='code' |
+| **Version** | Act (Aug 2019) + Central Rules (2020) + State Rules | ✅ Multiple versions with different effective dates |
+| **Section** | Chapters I-IX (Minimum Wages, Payment, Bonus, Inspection, Penalties) | ✅ Hierarchical sections (chapters → sections) |
+| **Applicability** | All establishments in industry, trade, business, manufacturing | ✅ industries=['manufacturing','trade','business'], entityTypes=['establishment'] |
+| **Obligation** | "Employer shall pay wages within 7 days of month end" | ✅ obligationType='filing', mandatory=true, frequency='monthly' |
+| **Deadline** | "Wages within 7 days of following month" | ✅ deadlineType='relative', dueCondition='within_7_days' |
+| **ReportingRequirement** | "Wage slips for every payment cycle" | ✅ authority='Inspector-cum-Facilitator', reportType='wage_slip' |
+| **Penalty** | "Imprisonment up to 3 years, fine up to ₹1 lakh" | ✅ penaltyType='criminal', severity='high' |
+| **Citation** | "Section 17 mandates timely payment of wages" | ✅ sectionNumber, sourceText |
+
+**Result:** Code on Wages maps cleanly to all 9 domain objects. The hierarchical section structure (chapters → sections → subsections) is handled by `parentSectionId`.
+
+### 3. Validation Summary
+
+| Regulation Family | Regulator | Domain Objects Mapped | Schema Changes Needed |
+|---|---|---|---|
+| RBI Digital Lending | RBI | 9/9 | None |
+| SEBI LODR | SEBI | 9/9 | None |
+| MCA CCFS | MCA | 9/9 | None |
+| DPDP Act 2023 | MeitY | 9/9 | None |
+| Code on Wages 2019 | MoLE | 9/9 | None |
+
+**Conclusion:** The domain model is regulator-agnostic. It handles:
+- Different regulation types (Acts, Codes, Directions, Notifications)
+- Different obligation styles (prescriptive "shall", prohibitory "shall not", permissive "may")
+- Different deadline types (absolute dates, relative periods, event-based)
+- Different penalty structures (monetary, criminal, regulatory action)
+- Hierarchical section structures (chapters → sections → clauses → sub-clauses)
+- Cross-border applicability (jurisdictions array)
+- Multiple versions with supersession tracking
+
+---
+
+## Widget Plan — NitroStack Widget Experience
+
+### Widget Inventory
+
+| Widget | Description | MCP Tools/Resources | Interaction |
+|---|---|---|---|
+| **Regulation Explorer** | Browse and search regulations with full detail view | `search_regulations`, `get_regulation`, `get_regulation_versions` | Search, filter, drill into sections |
+| **Regulation Diff Viewer** | Compare two regulation versions side-by-side | `compare_regulation_versions` | Select versions, view added/removed/modified |
+| **Compliance Dashboard** | Overview of compliance posture across all regulations | `evaluate_applicability`, `find_obligations`, `get_company_profile` | Company selector, status cards, charts |
+| **Action Plan Board** | Kanban-style obligation tracker | `generate_action_plan`, `find_obligations` | Drag-drop between status columns |
+| **Applicability Matrix** | Visual matrix of regulation × company applicability | `evaluate_applicability`, `list_regulatory_sources` | Toggle regulations, view match confidence |
+| **Compliance Timeline** | Timeline of obligations with deadlines | `find_obligations` (with deadline filtering) | Zoom, filter by priority/regulator |
+
+### Widget Details
+
+#### 1. Regulation Explorer
+- **Layout:** Left sidebar (search + filters), main area (regulation list), right panel (detail view)
+- **Filters:** Regulator, document type, status, date range
+- **Detail view:** Metadata card, version timeline, sections tree, obligations list
+- **MCP interaction:** `search_regulations` for list, `get_regulation` for detail, `get_regulation_versions` for history
+
+#### 2. Regulation Diff Viewer
+- **Layout:** Two-column side-by-side comparison
+- **Controls:** Version selector dropdowns for each side
+- **Diff display:** Green (added), red (removed), yellow (modified) highlighting
+- **Navigation:** Section-by-section diff with summary counts
+- **MCP interaction:** `compare_regulation_versions` returns structured diff
+
+#### 3. Compliance Dashboard
+- **Layout:** Top status cards (total obligations, mandatory, overdue, compliant), bottom charts
+- **Charts:** Obligations by regulator (pie), by priority (bar), compliance trend (line)
+- **Company selector:** Dropdown to switch company profile
+- **MCP interaction:** `get_company_profile` for company, `find_obligations` for counts, `evaluate_applicability` for status
+
+#### 4. Action Plan Board
+- **Layout:** 3-column Kanban (Immediate, Scheduled, Monitored)
+- **Cards:** Obligation title, priority badge, regulator tag, deadline indicator
+- **Drag-drop:** Move obligations between columns (updates status)
+- **MCP interaction:** `generate_action_plan` populates columns, `find_obligations` for details
+
+#### 5. Applicability Matrix
+- **Layout:** Grid with regulations as columns, company attributes as rows
+- **Cells:** Match (green check), no match (gray dash), partial (yellow warning)
+- **Confidence indicator:** High/Medium/Low badge per regulation
+- **MCP interaction:** `evaluate_applicability` for each regulation, `list_regulatory_sources` for regulation list
+
+#### 6. Compliance Timeline
+- **Layout:** Horizontal timeline with obligation cards at deadline points
+- **Controls:** Date range selector, priority filter, regulator filter
+- **Visual:** Color-coded by priority (red=high, amber=medium, green=low)
+- **MCP interaction:** `find_obligations` filtered by deadline dates
+
+### Widget Implementation Priority
+
+| Priority | Widget | Rationale | Status |
+|---|---|---|---|
+| P0 | Regulation Explorer | Core browsing experience, most-used widget | ✅ Implemented |
+| P0 | Compliance Dashboard | Executive summary, demo centerpiece | ✅ Implemented |
+| P1 | Action Plan Board | Operational tool, shows MCP interaction | Pending |
+| P1 | Applicability Matrix | Visual proof of deterministic evaluation | Pending |
+| P2 | Regulation Diff Viewer | Power-user feature, demonstrates versioning | Pending |
+| P2 | Compliance Timeline | Planning tool, shows deadline awareness | Pending |
+
+### Widget-Tool Mapping
+
+Every widget should:
+1. Have a clear entry point (which tool launches it)
+2. Show loading states while MCP tools execute
+3. Handle empty states gracefully
+4. Support refresh/re-evaluation
+5. Display metadata about data freshness
+
+### Widget-Tool Integration
+
+| Widget | MCP Tools | Interaction |
+|---|---|---|
+| Regulation Explorer | `search_regulations`, `get_regulation`, `get_regulation_versions` | Search, select, view details |
+| Compliance Dashboard | `evaluate_applicability`, `find_obligations`, `get_company_profile` | Refresh, filter, evaluate |
+
+### Demo Flow
+
+See `demo-flow.md` for complete demo narrative and step-by-step guide.
+
+Key demo steps:
+1. Seed demo data (`npx tsx src/demo/seed-demo.ts`)
+2. Run ingestion pipeline
+3. Generate embeddings
+4. Open Regulation Explorer
+5. View Compliance Dashboard
+6. Generate Action Plan
+
+---
+
+## What's Not Done
+
+- PDF parsing with pdf-parse (currently falls back to text parsing)
+- Real gazette-specific parsing patterns
+- P2 widgets (Regulation Diff Viewer, Compliance Timeline)
+- NitroStudio validation (Phase 3)
+- Final validation report (Phase 4)
+
+---
+
+## Comprehensive Validation (Complete)
+
+**Overall Pass Rate: 80.3%** (155/193 tests)
+
+| Suite | Passed | Failed | Pass Rate |
+|---|---|---|---|
+| MCP Tool Validation | 51 | 6 | 89.5% |
+| Edge Case Validation | 15 | 5 | 75.0% |
+| Scale Validation | 13 | 3 | 81.3% |
+| Provider Validation | 4 | 0 | 100.0% |
+| Conversational Validation | 34 | 16 | 68.0% |
+| Widget Validation | 38 | 0 | 100.0% |
+
+**Recommendation:** Proceed to NitroStudio interactive testing.
+
+Full report: `validation-report-full.md`
