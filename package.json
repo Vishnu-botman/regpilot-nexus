@@ -5,6 +5,7 @@
   "type": "module",
   "description": "RegPilot Nexus - Regulatory Compliance MCP Server",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "nitrostack-cli dev",
     "build": "nitrostack-cli build",
     "start": "npm run build && nitrostack-cli start",
