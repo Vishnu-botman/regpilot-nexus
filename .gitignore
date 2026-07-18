@@ -10,3 +10,4 @@ src/widgets/out/
 *.db-journal
 .DS_Store
 .nitrostudio/
+src/widgets/package-lock.json
