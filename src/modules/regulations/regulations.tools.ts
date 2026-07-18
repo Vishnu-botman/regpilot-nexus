@@ -1,7 +1,7 @@
 import { ToolDecorator as Tool, Widget, Injectable, z } from '@nitrostack/core';
 import { RegulationsRepository } from './regulations.repository.js';
 
-@Injectable()
+@Injectable({ deps: [RegulationsRepository] })
 export class RegulationsTools {
   constructor(private readonly repository: RegulationsRepository) {}
 

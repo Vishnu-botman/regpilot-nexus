@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme, useWidgetSDK } from '@nitrostack/widgets';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { regulationPreviewData } from '../lib/preview-data';
 
 export const dynamic = 'force-dynamic';
@@ -31,11 +31,23 @@ interface WidgetData {
 }
 
 export default function RegulationExplorer() {
-  const theme = useTheme();
-  const { isReady, getToolOutput } = useWidgetSDK();
+  const themeHook = useTheme();
+  const sdk = useWidgetSDK();
+  const [isStandalone, setIsStandalone] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
 
-  const data = getToolOutput<WidgetData>() || regulationPreviewData as WidgetData;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!sdk.isReady) {
+        setIsStandalone(true);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [sdk.isReady]);
+
+  const isReady = sdk.isReady || isStandalone;
+  const theme = themeHook || 'light';
+  const data = sdk.getToolOutput<WidgetData>() || regulationPreviewData as WidgetData;
   const isDark = theme === 'dark';
   const bgColor = isDark ? '#1a1a1a' : '#ffffff';
   const textColor = isDark ? '#ffffff' : '#000000';

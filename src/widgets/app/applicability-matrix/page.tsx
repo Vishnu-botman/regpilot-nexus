@@ -1,6 +1,7 @@
 'use client';
 
 import { useTheme, useWidgetSDK } from '@nitrostack/widgets';
+import { useState, useEffect } from 'react';
 import { applicabilityPreviewData } from '../lib/preview-data';
 
 export const dynamic = 'force-dynamic';
@@ -22,17 +23,29 @@ interface WidgetData {
 }
 
 export default function ApplicabilityMatrix() {
-  const theme = useTheme();
-  const { isReady, getToolOutput } = useWidgetSDK();
+  const themeHook = useTheme();
+  const sdk = useWidgetSDK();
+  const [isStandalone, setIsStandalone] = useState(false);
 
-  const data = getToolOutput<WidgetData>() || applicabilityPreviewData as WidgetData;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!sdk.isReady) {
+        setIsStandalone(true);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [sdk.isReady]);
+
+  const isReady = sdk.isReady || isStandalone;
+  const theme = themeHook || 'light';
+  const data = sdk.getToolOutput<WidgetData>() || applicabilityPreviewData as WidgetData;
   const isDark = theme === 'dark';
   const bgColor = isDark ? '#1a1a1a' : '#ffffff';
   const textColor = isDark ? '#ffffff' : '#000000';
   const mutedColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
   const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
-  if (!isReady || !theme) {
+  if (!isReady) {
     return <div style={{ padding: 24, textAlign: 'center', color: '#000' }}>Initializing...</div>;
   }
 
